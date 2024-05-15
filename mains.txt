@@ -1,0 +1,134 @@
+package main
+
+import (
+	"database/sql"
+	"fmt"
+	"os"
+	"time"
+
+	_ "github.com/jackc/pgx/v5/stdlib"
+)
+
+type Products struct {
+	ID       uint
+	Name     string
+	Category string
+	Price    int
+}
+
+func mains() {
+	connURI := "postgresql://postgres:postgres@localhost:5432/database?sslmode=disable"
+	db, err := sql.Open("pgx", connURI)
+
+	if err != nil {
+		fmt.Printf("Gagal Menghubungkan ke database: %v\n", err)
+		os.Exit(1)
+	}
+
+	defer db.Close()
+
+	db.SetMaxOpenConns(10)
+	db.SetMaxIdleConns(5)
+	db.SetConnMaxIdleTime(15 * time.Minute)
+	db.SetConnMaxLifetime(1 * time.Hour)
+
+	err = db.Ping()
+
+	if err != nil {
+		fmt.Printf("Terjadi Kesalahan: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Println("Database berhasil terhubung")
+
+	// _, err = db.Exec(`CREATE TABLE IF NOT EXISTS product
+	// 	(id SERIAL PRIMARY KEY,
+	// 	name VARCHAR(255),
+	// 	category VARCHAR(50),
+	// 	price INT)
+	// `)
+
+	// if err != nil {
+	// 	fmt.Printf("Gagal membuat table: %v\n", err)
+	// 	os.Exit(1)
+	// }
+
+	// fmt.Println("Table berhasil dibuat")
+
+	// _, err = db.Exec(`INSERT INTO product (name, category, price) VALUES ($1, $2, $3)`, "Kertas A4", "Kertas", 35000)
+	// if err != nil {
+	// 	fmt.Printf("Gagal mengisi table: %v\n", err)
+	// 	os.Exit(1)
+	// }
+
+	// fmt.Println("Table berhasil di isi")
+
+	// row := db.QueryRow(`SELECT id, name, category, price FROM product WHERE id = $1`, 1)
+
+	// if row == nil {
+	// 	fmt.Printf("Gagal membaca data: %v\n", err)
+	// 	os.Exit(1)
+	// }
+
+	// var product Product
+	// err = row.Scan(&product.ID, &product.Name, &product.Category, &product.Price)
+	// if err != nil {
+	// 	fmt.Printf("Gagal mengambil data: %v\n", err)
+	// 	os.Exit(1)
+	// }
+
+	// fmt.Println(product)
+
+	// rows, err := db.Query(`SELECT id, name, category, price FROM product`)
+	// if rows == nil || err != nil {
+	// 	fmt.Printf("Gagal mengambil data: %v\n", err)
+	// 	os.Exit(1)
+	// }
+
+	// var products []Product
+
+	// for rows.Next() {
+	// 	var product Product
+	// 	err = rows.Scan(&product.ID, &product.Name, &product.Category, &product.Price)
+	// 	if err != nil {
+	// 		fmt.Printf("Gagal mengambil data : %v\n", err)
+	// 		os.Exit(1)
+	// 	}
+
+	// 	products = append(products, product)
+	// }
+
+	// fmt.Println(products)
+
+	// _, err = db.Exec(`UPDATE product SET name = $1, category = $2, price = $3 WHERE id = $4`, "Kertas A5", "Kertas", 20000, 2)
+	// if err != nil {
+	// 	fmt.Printf("Gagal memperbaharui data: %v\n", err)
+	// 	os.Exit(1)
+	// }
+
+	// fmt.Println("Berhasil mengupdate data")
+
+	// _, err = db.Exec(`DELETE FROM product WHERE id = $1`, 1)
+	// if err != nil {
+	// 	fmt.Printf("Delete data gagal: %v\n", err)
+	// 	os.Exit(1)
+	// }
+
+	// fmt.Println("Delete data berhasil")
+
+	tx, err := db.Begin()
+	if err != nil {
+		fmt.Printf("Gagal membuat transaction: %v\n", err)
+		os.Exit(1)
+	}
+
+	_, err = tx.Exec(`DELETE FROM product WHERE id = $1`, 2)
+	if err != nil {
+		fmt.Printf("Gagal menghapus data: %v\n", err)
+		tx.Rollback()
+		os.Exit(1)
+	}
+
+	tx.Commit()
+	fmt.Println("Transaction Berhasil")
+}

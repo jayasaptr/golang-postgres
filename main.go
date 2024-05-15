@@ -1,134 +1,128 @@
 package main
 
 import (
-	"database/sql"
 	"fmt"
 	"os"
-	"time"
 
-	_ "github.com/jackc/pgx/v5/stdlib"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
 
 type Product struct {
-	ID       uint
-	Name     string
-	Category string
-	Price    int
+	ID       uint   `gorm:"primaryKey;autoIncrement;type:serial;column:id"`
+	Name     string `gorm:"type:varchar(255);column:name"`
+	Category string `gorm:"type:varchar(255);column:category"`
+	Price    int    `gorm:"type:int;column:price"`
+}
+
+type Penduduk struct {
+	ID     uint     `gorm:"primaryKey;autoIncrement;type:serial;column:id"`
+	Alamat []Alamat `gorm:"many2many:penduduk_alamat"`
+}
+
+type Alamat struct {
+	ID            uint   `gorm:"primaryKey;autoIncrement;type:serial;column:id"`
+	AlamatLengkap string `gorm:"column:alamat_lengkap"`
+}
+
+func (Product) TableName() string {
+	return "products"
 }
 
 func main() {
-	connURI := "postgresql://postgres:postgres@localhost:5432/database?sslmode=disable"
-	db, err := sql.Open("pgx", connURI)
-
+	connURI := "postgresql://postgres:password@localhost:5432/database?sslmode=disable"
+	db, err := gorm.Open(postgres.Open(connURI), &gorm.Config{
+		SkipDefaultTransaction: true,
+	})
 	if err != nil {
-		fmt.Printf("Gagal Menghubungkan ke database: %v\n", err)
+		fmt.Printf("Gagal menghubungkan database %v\n", err)
 		os.Exit(1)
 	}
 
-	defer db.Close()
+	sqlDB, _ := db.DB()
 
-	db.SetMaxOpenConns(10)
-	db.SetMaxIdleConns(5)
-	db.SetConnMaxIdleTime(15 * time.Minute)
-	db.SetConnMaxLifetime(1 * time.Hour)
+	defer sqlDB.Close()
 
-	err = db.Ping()
+	fmt.Println("Database berhasil dihubungkan")
 
-	if err != nil {
-		fmt.Printf("Terjadi Kesalahan: %v\n", err)
-		os.Exit(1)
-	}
+	db.AutoMigrate(&Product{}, &Alamat{}, &Penduduk{})
 
-	fmt.Println("Database berhasil terhubung")
+	fmt.Println("Table berhasil dibuat")
 
-	// _, err = db.Exec(`CREATE TABLE IF NOT EXISTS product
-	// 	(id SERIAL PRIMARY KEY,
-	// 	name VARCHAR(255),
-	// 	category VARCHAR(50),
-	// 	price INT)
-	// `)
+	// produk := Product{Name: "Kertas A4", Category: "Kertas", Price: 45000}
 
-	// if err != nil {
-	// 	fmt.Printf("Gagal membuat table: %v\n", err)
+	// result := db.Create(&produk)
+
+	// if result.Error != nil {
+	// 	fmt.Printf("Gagal menambahkan data : %v\n", result.Error)
 	// 	os.Exit(1)
 	// }
 
-	// fmt.Println("Table berhasil dibuat")
+	// fmt.Println("Data berhasil ditambahkan")
 
-	// _, err = db.Exec(`INSERT INTO product (name, category, price) VALUES ($1, $2, $3)`, "Kertas A4", "Kertas", 35000)
-	// if err != nil {
-	// 	fmt.Printf("Gagal mengisi table: %v\n", err)
-	// 	os.Exit(1)
-	// }
+	// product := Product{ID: 2}
 
-	// fmt.Println("Table berhasil di isi")
+	// result := db.First(&product)
 
-	// row := db.QueryRow(`SELECT id, name, category, price FROM product WHERE id = $1`, 1)
-
-	// if row == nil {
-	// 	fmt.Printf("Gagal membaca data: %v\n", err)
-	// 	os.Exit(1)
-	// }
-
-	// var product Product
-	// err = row.Scan(&product.ID, &product.Name, &product.Category, &product.Price)
-	// if err != nil {
-	// 	fmt.Printf("Gagal mengambil data: %v\n", err)
-	// 	os.Exit(1)
+	// if result.Error != nil {
+	// 	fmt.Printf("Data tidak ditemukan %v\n", result.Error)
 	// }
 
 	// fmt.Println(product)
 
-	// rows, err := db.Query(`SELECT id, name, category, price FROM product`)
-	// if rows == nil || err != nil {
-	// 	fmt.Printf("Gagal mengambil data: %v\n", err)
-	// 	os.Exit(1)
+	// var productSlice []Product
+
+	// result := db.Where(map[string]interface{}{"id": 1}).Find(&productSlice)
+
+	// if result.Error != nil {
+	// 	fmt.Printf("Gagal menampilkan product %v\n", result.Error)
 	// }
 
-	// var products []Product
+	// fmt.Println(productSlice)
 
-	// for rows.Next() {
-	// 	var product Product
-	// 	err = rows.Scan(&product.ID, &product.Name, &product.Category, &product.Price)
-	// 	if err != nil {
-	// 		fmt.Printf("Gagal mengambil data : %v\n", err)
-	// 		os.Exit(1)
+	// result := db.Model(&Product{ID: 1}).Updates(&Product{Name: "Pensil"})
+
+	// if result.Error != nil {
+	// 	fmt.Printf("Product gagal di update %v\n", result.Error)
+	// }
+
+	// fmt.Println("Product berhasil di update")
+
+	// result := db.Delete(Product{ID: 1})
+	// if result.Error != nil {
+	// 	fmt.Printf("Hapus data gagal %v\n", result.Error)
+	// }
+
+	// fmt.Println("Data berhasil di hapus")
+
+	// db.Transaction(func(tx *gorm.DB) error {
+	// 	if result := tx.Delete(&Product{ID: 1}); result.Error != nil {
+	// 		fmt.Printf("Transaction gagal %v\n", result.Error)
+	// 		return result.Error
+	// 	} else {
+	// 		fmt.Println("Transaction berhasil")
+	// 		return nil
 	// 	}
+	// })
 
-	// 	products = append(products, product)
+	//add data penduduk
+
+	// penduduk := Penduduk{
+	// 	Alamat: []Alamat{
+	// 		{
+	// 			AlamatLengkap: "Kota Jakarta",
+	// 		},
+	// 		{
+	// 			AlamatLengkap: "Banjarbaru",
+	// 		},
+	// 	},
 	// }
 
-	// fmt.Println(products)
+	// db.Create(&penduduk)
 
-	// _, err = db.Exec(`UPDATE product SET name = $1, category = $2, price = $3 WHERE id = $4`, "Kertas A5", "Kertas", 20000, 2)
-	// if err != nil {
-	// 	fmt.Printf("Gagal memperbaharui data: %v\n", err)
-	// 	os.Exit(1)
-	// }
+	var penduduk Penduduk
 
-	// fmt.Println("Berhasil mengupdate data")
+	db.Preload("Alamat").First(&penduduk, 1)
 
-	// _, err = db.Exec(`DELETE FROM product WHERE id = $1`, 1)
-	// if err != nil {
-	// 	fmt.Printf("Delete data gagal: %v\n", err)
-	// 	os.Exit(1)
-	// }
-
-	// fmt.Println("Delete data berhasil")
-
-	tx, err := db.Begin()
-	if err != nil {
-		fmt.Printf("Gagal membuat transaction: %v\n", err)
-		os.Exit(1)
-	}
-
-	_, err = tx.Exec(`DELETE FROM product WHERE id = $1`, 2)
-	if err != nil {
-		fmt.Printf("Gagal menghapus data: %v\n", err)
-		tx.Rollback()
-		os.Exit(1)
-	}
-
-	tx.Commit()
-	fmt.Println("Transaction Berhasil")
+	fmt.Println(penduduk)
 }

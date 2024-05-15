@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
+	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
@@ -25,6 +26,11 @@ func main() {
 	}
 
 	defer db.Close()
+
+	db.SetMaxOpenConns(10)
+	db.SetMaxIdleConns(5)
+	db.SetConnMaxIdleTime(15 * time.Minute)
+	db.SetConnMaxLifetime(1 * time.Hour)
 
 	err = db.Ping()
 

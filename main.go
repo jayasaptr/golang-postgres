@@ -73,26 +73,26 @@ func main() {
 
 	// fmt.Println(product)
 
-	rows, err := db.Query(`SELECT id, name, category, price FROM product`)
-	if rows == nil || err != nil {
-		fmt.Printf("Gagal mengambil data: %v\n", err)
-		os.Exit(1)
-	}
+	// rows, err := db.Query(`SELECT id, name, category, price FROM product`)
+	// if rows == nil || err != nil {
+	// 	fmt.Printf("Gagal mengambil data: %v\n", err)
+	// 	os.Exit(1)
+	// }
 
-	var products []Product
+	// var products []Product
 
-	for rows.Next() {
-		var product Product
-		err = rows.Scan(&product.ID, &product.Name, &product.Category, &product.Price)
-		if err != nil {
-			fmt.Printf("Gagal mengambil data : %v\n", err)
-			os.Exit(1)
-		}
+	// for rows.Next() {
+	// 	var product Product
+	// 	err = rows.Scan(&product.ID, &product.Name, &product.Category, &product.Price)
+	// 	if err != nil {
+	// 		fmt.Printf("Gagal mengambil data : %v\n", err)
+	// 		os.Exit(1)
+	// 	}
 
-		products = append(products, product)
-	}
+	// 	products = append(products, product)
+	// }
 
-	fmt.Println(products)
+	// fmt.Println(products)
 
 	// _, err = db.Exec(`UPDATE product SET name = $1, category = $2, price = $3 WHERE id = $4`, "Kertas A5", "Kertas", 20000, 2)
 	// if err != nil {
@@ -110,4 +110,19 @@ func main() {
 
 	// fmt.Println("Delete data berhasil")
 
+	tx, err := db.Begin()
+	if err != nil {
+		fmt.Printf("Gagal membuat transaction: %v\n", err)
+		os.Exit(1)
+	}
+
+	_, err = tx.Exec(`DELETE FROM product WHERE id = $1`, 2)
+	if err != nil {
+		fmt.Printf("Gagal menghapus data: %v\n", err)
+		tx.Rollback()
+		os.Exit(1)
+	}
+
+	tx.Commit()
+	fmt.Println("Transaction Berhasil")
 }
